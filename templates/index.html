@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>ComicCraft AI</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1000px;
+            margin: 30px auto;
+            padding: 20px;
+            background: #f4f4f4;
+        }
+
+        h1 {
+            text-align: center;
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 140px;
+            padding: 12px;
+            font-size: 16px;
+            box-sizing: border-box;
+            resize: vertical;
+        }
+
+        button {
+            display: block;
+            margin: 15px auto;
+            padding: 12px 25px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        #result {
+            margin-top: 25px;
+        }
+
+        .panel {
+            background: white;
+            margin: 25px 0;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .panel img {
+            width: 100%;
+            max-width: 768px;
+            display: block;
+            margin: 15px auto;
+            border-radius: 10px;
+        }
+
+        .loading {
+            text-align: center;
+            font-size: 18px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>🎨 ComicCraft AI</h1>
+
+    <p>Enter your comic story idea:</p>
+
+    <textarea
+        id="prompt"
+        placeholder="Example: A girl discovers a magical forest and meets a friendly dragon..."
+    ></textarea>
+
+    <button onclick="generateComic()">
+        Generate Comic
+    </button>
+
+    <div id="result"></div>
+
+    <script>
+        async function generateComic() {
+
+            const prompt = document.getElementById("prompt").value;
+            const result = document.getElementById("result");
+
+            if (!prompt.trim()) {
+                result.innerHTML = "<p>Please enter a story idea.</p>";
+                return;
+            }
+
+            result.innerHTML =
+                "<p class='loading'>🎨 Generating story and comic images... Please wait.</p>";
+
+            try {
+
+                const response = await fetch("/generate-comic/json", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        prompt: prompt
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.error) {
+                    result.innerHTML = `
+                        <p><strong>Error:</strong> ${data.error}</p>
+                    `;
+                    return;
+                }
+
+                let html = `
+                    <h2>${data.title}</h2>
+                `;
+
+                const imageMap = {};
+
+                if (data.images) {
+                    data.images.forEach(item => {
+                        imageMap[item.panel] = item.image;
+                    });
+                }
+
+                data.panels.forEach(panel => {
+
+                    const imagePath = imageMap[panel.panel];
+
+                    html += `
+                        <div class="panel">
+
+                            <h3>Panel ${panel.panel}</h3>
+
+                            ${
+                                imagePath
+                                ? `<img src="${imagePath}" alt="Comic Panel ${panel.panel}">`
+                                : `<p>Image could not be generated for this panel.</p>`
+                            }
+
+                            <p>
+                                <strong>Scene:</strong>
+                                ${panel.scene}
+                            </p>
+
+                            <p>
+                                <strong>Dialogue:</strong>
+                                ${panel.dialogue}
+                            </p>
+
+                        </div>
+                    `;
+                });
+
+                result.innerHTML = html;
+
+            } catch (error) {
+
+                result.innerHTML = `
+                    <p>
+                        <strong>Error:</strong>
+                        ${error.message}
+                    </p>
+                `;
+            }
+        }
+    </script>
+
+</body>
+</html>
